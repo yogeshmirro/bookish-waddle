@@ -29,7 +29,6 @@ jobs:
        - name: Initialization
          continue-on-error: true
          run: |
-           cd scripts
            git config --global user.name ${{ secrets.GH_USR }}
            git config --global user.email ${{ secrets.GH_MAIL }}
            git config --global credential.helper store
