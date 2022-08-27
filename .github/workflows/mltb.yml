@@ -1,0 +1,60 @@
+name: MLTB Flow
+
+on:
+  push:
+    paths:
+      - 'Records/MLTBFlow.txt'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+       - name: Checkout
+         uses: actions/checkout@main
+ #############################################################################################
+       - name: Set ENV vars
+         run: |
+           export TZ=Asia/Dhaka
+ #############################################################################################
+       - name: Delete workflow runs
+         uses: Mattraks/delete-workflow-runs@v2
+         with:
+           token: ${{ github.token }}
+           repository: ${{ github.repository }}
+           retain_days: 0
+           keep_minimum_runs: 0
+ #############################################################################################      
+       - name: Initialization
+         continue-on-error: true
+         run: |
+           cd scripts
+           git config --global user.name ${{ secrets.GH_USR }}
+           git config --global user.email ${{ secrets.GH_MAIL }}
+           git config --global credential.helper store
+           echo "https://${{ secrets.GH_USR }}:${{ secrets.GH_TOKEN }}@github.com" > ~/.git-credentials
+#############################################################################################
+
+       - uses: styfle/cancel-workflow-action@0.9.0
+         name: "Cancel duplicate workflow runs"
+         with:
+            all_but_latest: true
+            access_token: ${{ github.token }}
+
+#############################################################################################
+       - name: Cleaning up some space & Deploying and Running bot in Parallel
+         timeout-minutes: 345
+         continue-on-error: true
+         run: |
+           parallel -u ::: 'sudo bash cleanup.sh' 'git clone https://${{ secrets.PU }}:${{ secrets.GH_TOKEN }}@github.com/${{ secrets.PU }}/${{ secrets.PUR }} rr && cd rr && sudo docker-compose up --build'
+#############################################################################################
+       - name: Send Record to Github
+         continue-on-error: true
+         run: |
+           git clone https://github.com/DimitriKochimov/bookish-waddle
+           cd bookish-waddle || exit 1
+           echo $(TZ='${{ secrets.TZ }}' date) >> Records/MLTBFlow.txt
+           git add Records/MLTBFlow.txt
+           git commit -m "Workflow : add recorded loop to logs $(TZ='${{ secrets.TZ }}' date)"
+           git push -q https://DimitriKochimov:${{ secrets.GH_TOKEN }}@github.com/DimitriKochimov/bookish-waddle HEAD:master
